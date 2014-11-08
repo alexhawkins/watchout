@@ -26,10 +26,44 @@ var User = function(){
     .attr("class", "user")
     .attr("r", function(d){return d.r;})
     .attr("transform", "translate("+ this.data.x +", " + this.data.y + ")")
-    .attr("fill", this.data.color);
+    .attr("fill", this.data.color)
+    .call(drag);
 };
 
+
+var drag = d3.behavior.drag()
+  .on("drag", function(d) {
+    console.log(this);
+    d.x =  d.x + d3.event.dx;
+    d.y =  d.y + d3.event.dy;
+    if(d.x >= options.width){ d.x = options.width -10; }
+    if(d.x <= 0 ){ d.x = 10; }
+    if(d.y >= options.height){ d.y = options.height -10; }
+    if(d.y <= 0 ){ d.y = 10; }
+    d3.select(this)
+    //.transition()
+    .attr("transform", "translate(" + d.x + " ," +  d.y + ")");
+    //.attr("cy", d.x)
+    //.attr("cx", d.y);
+  });
+
+// User.prototype.dragIt = function(){
+//   return d3.behavior.drag()
+//     .on("drag", function() {
+//       var X = this.data.x + d3.event.x;
+//       var Y = this.data.y + d3.event.y;
+//       this.data.x = X;
+//       this.data.y = Y;
+//     });
+//     board.selectAll('circle.user')
+//       .data([this.data])
+//       .attr("cx", function(d) { return d.x; })
+//       .attr("cy", function(d) { return d.y; });
+//     console.log('you suck');
+// };
+
 var user = new User();
+
 
 var Enemy = function(){
   this.data = [];
@@ -40,7 +74,7 @@ var Enemy = function(){
     .append("circle")
     .attr("class", "enemy")
     .attr("r", function(d){return d.r;})
-    .attr("fill", function(d){ return d.color})
+    .attr("fill", function(d){ return d.color })
     //attr("transform",  "translate("+ this.data.x +", " + this.data.y + ")");
     .attr("cx", function(d) { return d.x; })
     .attr("cy", function(d) { return d.y; });
@@ -60,29 +94,44 @@ Enemy.prototype.updatePosition = function(){
 
 Enemy.prototype.moveEnemies = function(){
 
+  /* for(var i = 0; i <options.numberOfEnemies; i++){
+    var newX = Math.abs(Math.floor(this.data[i].x + Math.random() * options.width) - Math.random() * options.width);
+    var newY = Math.abs(Math.floor(this.data[i].x + Math.random() * options.height) - Math.random() * options.height);
 
-  board.selectAll("circle.enemy")
-      .data(this.data)
-      .attr("cx", function(d){return d.x}) // make the body green
-      .attr("cy", function(d){return d.y})
+
+    board.selectAll("circle.enemy")
+      .data(this.data[i])
+      .attr("cx", function(d){return d.x;}) // make the body green
+      .attr("cy", function(d){return d.y;})
       .transition()
-      .attr("cx", function(d){return d.x+50}) // then transition to red
-      .attr("cy", function(d){return d.y+50});
+      .attr("cx", newX) // then transition to red
+      .attr("cy", newY);
+  }*/
+
+  this.updatePosition();
+  board.selectAll('circle.enemy')
+    .data(this.data)
+    .transition()
+    .duration(2000)
+    .tween('custom', function() {
+      return function(t){
+        var en = d3.select(this);
+        var enX = en.attr('x');
+        var enY = en.attr('y');
+        var enR =  5;
+      }.bind(this);
+    })
+    .attr('cx', function(d){
+      return Math.floor(Math.random() * options.width);
+    })
+    .attr('cy', function(d) {
+      return Math.floor(Math.random() * options.height);
+    });
 };
-
-
-
 
 var enemy = new Enemy();
 
-
-
-// setInterval(function(){
-//   Enemy.prototype.moveEnemies.bind(enemy);
-// }, 1000);
-
-
-
+setInterval(enemy.moveEnemies.bind(enemy), 2000);
 setInterval(function(){
   options.currentScore++;
   d3.select(".current span").text(options.currentScore);
