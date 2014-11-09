@@ -1,139 +1,132 @@
-// start slingin' some d3 here.
+// start slingin" some d3 here.
+"use strict";
+
+/**************GAME OPTIONS*****************/
 
 var options = {
-  height: $(window).height() -100,
-  width: $(window).width() -100,
-  numberOfEnemies: 40,
-  currentScore: 0
+  gameHeight: document.getElementById("board").height.animVal.value,
+  gameWidth: document.getElementById("board").width.animVal.value,
+  numberOfEnemies: 30,
+  currentScore: 0,
+  highScore: 0,
+  collisions: 0
 };
 
-var board = d3.select("body").append("svg:svg")
-    .attr("width", options.width)
-    .attr("height", options.height)
-    .style("border", "1px solid black");
+/**************PLAYER*****************/
 
-var User = function(){
-  this.data = {
-    x: Math.floor(options.width/2),
-    y: Math.floor(options.height/2),
-    r: 10,
-    color: "green"
-  };
-  board.selectAll("circle.user")
-    .data([this.data])
-    .enter()
-    .append("circle")
-    .attr("class", "user")
-    .attr("r", function(d){return d.r;})
-    .attr("transform", "translate("+ this.data.x +", " + this.data.y + ")")
-    .attr("fill", this.data.color)
-    .call(drag);
-};
+var createPlayer = function() {
+  d3.select("#player")
+    .attr("cx", options.gameWidth / 2)
+    .attr("cy", options.gameHeight / 2)
+    .attr("r", 8)
+    .attr("stroke", "#333")
+    .attr("stroke-width", 2)
+    .attr("fill", "#ff0000");
 
-
-var drag = d3.behavior.drag()
-  .on("drag", function(d) {
-    console.log(this);
-    d.x =  d.x + d3.event.dx;
-    d.y =  d.y + d3.event.dy;
-    if(d.x >= options.width){ d.x = options.width -10; }
-    if(d.x <= 0 ){ d.x = 10; }
-    if(d.y >= options.height){ d.y = options.height -10; }
-    if(d.y <= 0 ){ d.y = 10; }
-    d3.select(this)
-    //.transition()
-    .attr("transform", "translate(" + d.x + " ," +  d.y + ")");
-    //.attr("cy", d.x)
-    //.attr("cx", d.y);
+  d3.select("#board").on("mousemove", function() {
+    var mouseCoordinates = d3.mouse(this);
+    //console.log(mouseCoordinates);
+    d3.select("#player").attr("cx", mouseCoordinates[0]).attr("cy", mouseCoordinates[1]);
+    d3.select("#xcoord span").text(mouseCoordinates[0]);
+    d3.select("#ycoord span").text(mouseCoordinates[1]);
   });
+};
 
-// User.prototype.dragIt = function(){
-//   return d3.behavior.drag()
-//     .on("drag", function() {
-//       var X = this.data.x + d3.event.x;
-//       var Y = this.data.y + d3.event.y;
-//       this.data.x = X;
-//       this.data.y = Y;
-//     });
-//     board.selectAll('circle.user')
-//       .data([this.data])
-//       .attr("cx", function(d) { return d.x; })
-//       .attr("cy", function(d) { return d.y; });
-//     console.log('you suck');
-// };
+/**************ENEMIES*****************/
 
-var user = new User();
+/** updates the coordinates our enemy dataset */
+var updateEnemies = function() {
+  var eData = [];
+  for (var i = 0; i < options.numberOfEnemies; i++) {
+    eData.push({
+      cx: Math.floor(Math.random() * options.gameWidth),
+      cy: Math.floor(Math.random() * options.gameHeight)
+    });
+  }
+  return eData;
+};
 
-
-var Enemy = function(){
-  this.data = [];
-  this.updatePosition();
-  board.selectAll("circle.enemy")
-    .data(this.data)
+/** initializes our enemies to our game board*/
+var createEnemies = function() {
+  var eData = updateEnemies();
+  d3.select("#board")
+    .selectAll(".enemy")
+    .data(eData)
     .enter()
     .append("circle")
+    .attr("cx", function(d) {
+      return d.cx;
+    })
+    .attr("cy", function(d) {
+      return d.cy;
+    })
+    .attr("r", 10)
     .attr("class", "enemy")
-    .attr("r", function(d){return d.r;})
-    .attr("fill", function(d){ return d.color })
-    //attr("transform",  "translate("+ this.data.x +", " + this.data.y + ")");
-    .attr("cx", function(d) { return d.x; })
-    .attr("cy", function(d) { return d.y; });
-  this.moveEnemies();
-};
-
-Enemy.prototype.updatePosition = function(){
-  for(var i =0; i < options.numberOfEnemies; i++){
-    this.data[i] = {
-      x: Math.floor(Math.random() * options.width),
-      y: Math.floor(Math.random() * options.height),
-      r: 5,
-      color: "red"
-    };
-  }
-};
-
-Enemy.prototype.moveEnemies = function(){
-
-  /* for(var i = 0; i <options.numberOfEnemies; i++){
-    var newX = Math.abs(Math.floor(this.data[i].x + Math.random() * options.width) - Math.random() * options.width);
-    var newY = Math.abs(Math.floor(this.data[i].x + Math.random() * options.height) - Math.random() * options.height);
-
-
-    board.selectAll("circle.enemy")
-      .data(this.data[i])
-      .attr("cx", function(d){return d.x;}) // make the body green
-      .attr("cy", function(d){return d.y;})
-      .transition()
-      .attr("cx", newX) // then transition to red
-      .attr("cy", newY);
-  }*/
-
-  this.updatePosition();
-  board.selectAll('circle.enemy')
-    .data(this.data)
+    .attr("fill", "black")
     .transition()
-    .duration(2000)
-    .tween('custom', function() {
-      return function(t){
-        var en = d3.select(this);
-        var enX = en.attr('x');
-        var enY = en.attr('y');
-        var enR =  5;
-      }.bind(this);
+    .duration(1000);
+  moveEnemies();
+};
+
+/** move our enemies to new coordinates by calling updateEnemies function */
+var moveEnemies = function() {
+  var newEnemyData = updateEnemies();
+  d3.selectAll(".enemy")
+    .data(newEnemyData)
+    .transition()
+    .duration(1000)
+    .attr("cx", function(d) {
+      return d.cx;
     })
-    .attr('cx', function(d){
-      return Math.floor(Math.random() * options.width);
-    })
-    .attr('cy', function(d) {
-      return Math.floor(Math.random() * options.height);
+    .attr("cy", function(d) {
+      return d.cy;
     });
 };
 
-var enemy = new Enemy();
+/** check for collisons between player and enemies */
+var checkForCollisions = function() {
+  var allEnemies = d3.selectAll(".enemy");
+  var player = d3.select("#player");
+  var locPlayerX = player.attr("cx");
+  var locPlayerY = player.attr("cy");
+  var pRadius = parseFloat(player.attr("r"));
 
-setInterval(enemy.moveEnemies.bind(enemy), 2000);
-setInterval(function(){
+  allEnemies.each(function(el) {
+    var locEnemyX = el.cx;
+    var locEnemyY = el.cy;
+    var eRadius = parseFloat(player.attr("r"));
+    var distance = Math.sqrt(Math.pow((locPlayerX - locEnemyX), 2) + Math.pow((locPlayerY - locEnemyY), 2));
+    var radiusSum = pRadius + eRadius;
+    if (distance < radiusSum) {
+      incrementCollisions();
+    }
+  });
+};
+
+/** update the collision count */
+var incrementCollisions = function() {
+  options.collisions++;
+  d3.select(".collisions span").text(options.collisions);
+  setScores();
+};
+
+/** set the high score and current score */
+var setScores = function() {
+  if (options.currentScore > options.highScore) {
+    options.highScore = options.currentScore;
+    d3.select(".high span").text(options.currentScore);
+  }
+  options.currentScore = 0;
+  d3.select(".current span").text(options.currentScore);
+};
+
+
+/** start our game **/
+createEnemies();
+createPlayer();
+setInterval(checkForCollisions, 100); //check for collisions every 100ms
+setInterval(moveEnemies, 2000); //move enemies
+setInterval(function() {
   options.currentScore++;
   d3.select(".current span").text(options.currentScore);
 }, 80);
-
